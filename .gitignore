@@ -1,0 +1,22 @@
+# Ignorar diretórios comuns de build e dependências
+.vs/
+Lanches.API\bin\
+Lanches.Core/bin/
+Lanches.Application/bin/
+Lanches.Infra/bin/
+obj/
+node_modules/
+
+# Ignorar arquivos específicos
+*.dll
+*.pdb
+*.xml
+*.cache
+*.txt
+
+# Ignorar logs ou diretórios de logs fictícios (se não existirem, não causarão problemas)
+Logs/
+
+# Ignorar o arquivo específico dentro de obj/Debug/net8.0/
+Lanches.API\obj\Debug/net8.0/Lanches.API.AssemblyInfoInputs.cache
+Lanches.API\bin\Debug\net8.0\Lanches.Application.dll

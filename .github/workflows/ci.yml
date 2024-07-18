@@ -1,0 +1,62 @@
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore
+
+      - name: Run tests with coverage
+        run: dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./TestResults/Coverage/ /p:Exclude="[Lanches.Infra]*%2c[Lanches.API]*"
+
+      - name: Install ReportGenerator
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+      - name: Generate coverage report
+        run: reportgenerator -reports:Lanches.Tests/TestResults/Coverage/coverage.opencover.xml -targetdir:Lanches.Tests/TestResults/CoverageReport
+
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-report
+          path: Lanches.Tests/TestResults/CoverageReport
+
+      - name: Install xmllint
+        run: sudo apt-get install -y libxml2-utils
+
+      - name: Use xmllint to extract sequenceCoverage
+        run: |
+          xmllint --xpath 'string(/CoverageSession/Summary/@sequenceCoverage)' Lanches.Tests/TestResults/Coverage/coverage.opencover.xml > sequenceCoverage.txt
+
+      - name: Read sequenceCoverage value
+        id: extract-sequence-coverage
+        run: |
+          sequenceCoverage=$(cat sequenceCoverage.txt)
+          echo "::set-output name=sequenceCoverage::$sequenceCoverage"
+
+      - name: Check sequence coverage threshold
+        run: |
+          sequenceCoverage=$(echo "${{ steps.extract-sequence-coverage.outputs.sequenceCoverage }}")
+          if (( $(echo "$sequenceCoverage >= 70" | bc -l) )); then
+            echo "Sequence coverage meets the threshold: $sequenceCoverage%"
+          else
+            echo "Error: Sequence coverage is below the threshold: $sequenceCoverage%"
+            exit 1
+          fi
